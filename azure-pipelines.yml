@@ -9,7 +9,7 @@ pool:
 variables:
   MAVEN_OPTS: "-Dmaven.test.failure.ignore=true"
   DOCKER_IMAGE_NAME: "prasannanjaneya/boardgame-project"
-  JAVA_HOME_PATH: "/usr/lib/jvm/java-17-openjdk-amd64"  # Use Java 17 for SonarQube plugin
+  JAVA_HOME_PATH: "/usr/lib/jvm/java-17-openjdk-amd64"  # Java 17 for SonarQube plugin
 
 stages:
   # -----------------------------
@@ -19,14 +19,15 @@ stages:
       - job: MavenBuild
         displayName: "Compile, Test & SonarQube"
         steps:
-          # If using SonarQube service connection
+          # SonarQube Prepare
           - task: SonarQubePrepare@5
             displayName: "Prepare SonarQube Analysis"
             inputs:
               SonarQube: 'sonarqube-svc'      # Your service connection name
               scannerMode: 'CLI'
               configMode: 'file'
-          
+
+          # Maven Build + SonarQube
           - task: Maven@4
             displayName: "Maven Build + SonarQube"
             inputs:
@@ -40,10 +41,11 @@ stages:
               mavenOptions: '$(MAVEN_OPTS)'
               sonarQubeRunAnalysis: true
               sqMavenPluginVersionChoice: 'latest'
-          
+
+          # SonarQube Analyze & Publish Quality Gate
           - task: SonarQubeAnalyze@5
             displayName: "Run SonarQube Analysis"
-          
+
           - task: SonarQubePublish@5
             displayName: "Publish SonarQube Quality Gate Results"
             inputs:
@@ -55,11 +57,16 @@ stages:
     dependsOn: Build_and_Test
     jobs:
       - job: TrivyScan
+        displayName: "Scan Source Code Dependencies"
         steps:
           - script: |
+              echo "Installing Trivy..."
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-              ./trivy fs --format json --output trivy-report-source.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL .
+              sudo mv ./bin/trivy /usr/local/bin/
+              echo "Running Trivy FS scan on source code..."
+              trivy fs --format json --output trivy-report-source.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL .
             displayName: "Run Trivy Source Scan"
+
           - task: PublishBuildArtifacts@1
             displayName: "Publish Trivy Source Scan Report"
             inputs:
@@ -73,6 +80,7 @@ stages:
     dependsOn: Dependency_Scan
     jobs:
       - job: DockerBuildPush
+        displayName: "Build & Push Docker Image"
         steps:
           - task: Docker@2
             displayName: "Build & Push Docker Image"
@@ -89,11 +97,16 @@ stages:
     dependsOn: Build_and_Push_Docker_Image
     jobs:
       - job: DockerTrivyScan
+        displayName: "Scan Docker Image"
         steps:
           - script: |
+              echo "Installing Trivy..."
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-              ./trivy image --format json --output trivy-report-image.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL $(DOCKER_IMAGE_NAME):$(Build.BuildId)
+              sudo mv ./bin/trivy /usr/local/bin/
+              echo "Running Trivy scan on Docker image..."
+              trivy image --format json --output trivy-report-image.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL $(DOCKER_IMAGE_NAME):$(Build.BuildId)
             displayName: "Run Trivy Docker Scan"
+
           - task: PublishBuildArtifacts@1
             displayName: "Publish Trivy Docker Scan Report"
             inputs:
