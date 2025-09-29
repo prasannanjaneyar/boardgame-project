@@ -89,8 +89,7 @@ stages:
               repository: '$(DOCKER_IMAGE_NAME)'
               command: 'buildAndPush'
               Dockerfile: '**/Dockerfile'
-              buildContext: '.'               # Ensure target/ exists
-              tags: '$(Build.BuildId)'
+              buildContext: '/target'
 
   # -----------------------------
   - stage: Scan_Docker_Image
