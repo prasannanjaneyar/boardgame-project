@@ -1,0 +1,56 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  name: boardgame-projecy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.test.failure.ignore=true"
+
+stages:
+  - stage: Build_and_Test
+    displayName: "Maven Build and Test"
+    jobs:
+      - job: MavenBuild
+        displayName: "Compile and Run Unit Tests"
+        steps:
+          - task: Maven@4
+            displayName: "Maven Compile & Test"
+            inputs:
+              azureSubscription: 'Azure subscription 1(5e47e5a1-7dc4-4abb-87a2-f371200842ea)'
+              mavenPomFile: 'pom.xml'
+              goals: 'clean install'
+              options: '-B'
+              publishJUnitResults: true
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              mavenVersionOption: 'Default'
+              mavenOptions: '$(MAVEN_OPTS)'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
+              sonarQubeRunAnalysis: true
+              sqMavenPluginVersionChoice: 'latest'
+
+  - stage: Dependency_Scan
+    displayName: "Dependency Scan with Trivy"
+    dependsOn: Build_and_Test
+    jobs:
+      - job: TrivyScan
+        displayName: "Trivy Scan on pom.xml"
+        steps:
+          - script: |
+              echo "Installing Trivy..."
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+              echo "Running Trivy FS scan..."
+              ./trivy fs --security-checks vuln --scanners vuln --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL .
+            displayName: "Run Trivy on source code"
+
+          # OPTIONAL: Upload report as pipeline artifact
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: "trivy-report.json"
+              ArtifactName: "TrivyReport"
+              publishLocation: "Container"
