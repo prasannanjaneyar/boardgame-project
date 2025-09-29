@@ -92,7 +92,7 @@ stages:
               buildContext: '$(Build.SourcesDirectory)'
               addPipelineData: false
               addBaseImageData: false
-              tags: '$(tag)'
+              #tags: '$(tag)'
 
   # -----------------------------
   - stage: Scan_Docker_Image
