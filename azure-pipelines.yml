@@ -21,6 +21,7 @@ stages:
           - task: Maven@4
             displayName: "Maven Build + SonarQube"
             inputs:
+              azureSubscription: 'Azure subscription 1(5e47e5a1-7dc4-4abb-87a2-f371200842ea)'
               mavenPomFile: 'pom.xml'
               goals: 'clean install sonar:sonar'
               options: '-B'
@@ -30,6 +31,8 @@ stages:
               jdkVersionOption: '1.11'
               mavenVersionOption: 'Default'
               mavenOptions: '$(MAVEN_OPTS)'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
               sonarQubeRunAnalysis: true
               sqMavenPluginVersionChoice: 'latest'
 
