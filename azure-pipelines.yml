@@ -20,7 +20,7 @@ stages:
         displayName: "Compile, Test & SonarQube"
         steps:
           # SonarQube Prepare
-          - task: SonarQubePrepare@8
+          - task: SonarQubePrepare@5
             displayName: "Prepare SonarQube Analysis"
             inputs:
               SonarQube: 'sonarqube-svc'      # Your service connection name
@@ -43,10 +43,10 @@ stages:
               sqMavenPluginVersionChoice: 'latest'
 
           # SonarQube Analyze & Publish Quality Gate
-          - task: SonarQubeAnalyze@8
+          - task: SonarQubeAnalyze@5
             displayName: "Run SonarQube Analysis"
 
-          - task: SonarQubePublish@8
+          - task: SonarQubePublish@5
             displayName: "Publish SonarQube Quality Gate Results"
             inputs:
               pollingTimeoutSec: '300'
