@@ -8,104 +8,75 @@ pool:
 
 variables:
   MAVEN_OPTS: "-Dmaven.test.failure.ignore=true"
+  DOCKER_IMAGE_NAME: "prasannanjaneya/boardgame-project"
+  JAVA_HOME_PATH: "/usr/lib/jvm/java-11-openjdk-amd64"  # Path to your installed JDK
 
 stages:
+  # -----------------------------
   - stage: Build_and_Test
-    displayName: "Maven Build and Test"
+    displayName: "Maven Build, Test & SonarQube Analysis"
     jobs:
       - job: MavenBuild
-        displayName: "Compile and Run Unit Tests"
         steps:
           - task: Maven@4
-            displayName: "Maven Compile & Test"
+            displayName: "Maven Build + SonarQube"
             inputs:
-              azureSubscription: 'Azure subscription 1(5e47e5a1-7dc4-4abb-87a2-f371200842ea)'
               mavenPomFile: 'pom.xml'
+              goals: 'clean install sonar:sonar'
+              options: '-B'
               publishJUnitResults: true
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
-              javaHomeOption: 'JDKVersion'
-              mavenVersionOption: 'Default'
-              mavenAuthenticateFeed: false
-              effectivePomSkip: false
-              sonarQubeRunAnalysis: false
+              javaHomeOption: 'Path'
+              jdkDirectory: '$(JAVA_HOME_PATH)'
+              mavenOptions: '$(MAVEN_OPTS)'
+              sonarQubeRunAnalysis: true
+              sqMavenPluginVersionChoice: 'latest'
 
+  # -----------------------------
   - stage: Dependency_Scan
-    displayName: "Dependency Scan with Trivy"
+    displayName: "Trivy Source Scan"
     dependsOn: Build_and_Test
     jobs:
       - job: TrivyScan
-        displayName: "Trivy Scan on pom.xml"
         steps:
           - script: |
-              echo "Installing Trivy..."
-              trivy fs --format table --severity MEDIUM,LOW,UNKNOWN,HIGH --exit-code 0 . && trivy fs --format table --severity CRITICAL --exit-code 0 .
-            displayName: "Run Trivy on source code"
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+              ./trivy fs --format json --output trivy-report-source.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL .
+            displayName: "Run Trivy Source Scan"
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: 'trivy-report-source.json'
+              ArtifactName: 'TrivySourceReport'
+              publishLocation: 'Container'
 
-  - stage: Sonarqube_Analysis
-    displayName: "Sonarqube_Analysis"
+  # -----------------------------
+  - stage: Build_and_Push_Docker_Image
+    displayName: "Build & Push Docker Image"
+    dependsOn: Dependency_Scan
     jobs:
-      - job: Sonarqube
-        displayName: "Sonarqube_Analysis"
+      - job: DockerBuildPush
         steps:
-        - task: SonarQubePrepare@7
-          inputs:
-            SonarQube: 'sonarqube-svc'
-            scannerMode: 'cli'
-            cliScannerVersion: '7.0.1.4817'
-            configMode: 'file'
-            extraProperties: |
-              # Additional properties that will be passed to the scanner, 
-              # Put one key=value per line, example:
-              # sonar.exclusions=**/*.bin
-               sonar.qualitygate.wait=true
-               sonar.qualitygate.timeout=300
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'docker-svc'
+              repository: '$(DOCKER_IMAGE_NAME)'
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              tags: '$(Build.BuildId)'
 
-  - stage: Run_Code_Analysis
-    displayName: "Code Analysis"
+  # -----------------------------
+  - stage: Scan_Docker_Image
+    displayName: "Trivy Docker Image Scan"
+    dependsOn: Build_and_Push_Docker_Image
     jobs:
-      - job: Sonarqube
-        displayName: "Code Analysis"
+      - job: DockerTrivyScan
         steps:
-        - task: SonarQubeAnalyze@7
-          inputs:
-            jdkversion: 'JAVA_HOME'
-
-  - stage: Build_the_Code
-    displayName: "Build the Code"
-    jobs:
-      - job: Build_the_Code
-        displayName: "Build the Code"
-        steps:
-         - task: Maven@4
-           inputs:
-            mavenPomFile: 'pom.xml'
-            publishJUnitResults: true
-            testResultsFiles: '**/surefire-reports/TEST-*.xml'
-            javaHomeOption: 'JDKVersion'
-            mavenVersionOption: 'Default'
-            mavenAuthenticateFeed: false
-            effectivePomSkip: false
-            sonarQubeRunAnalysis: false
-
-  - stage: Build_Docker_Image
-    displayName: "Build Docker Image"
-    jobs:
-      - job: Build_Docker_Image
-        displayName: "Build Docker Image"
-        steps:
-        - task: Docker@2
-          inputs:
-           containerRegistry: 'docker-svc'
-           repository: 'prasannanjaneya/boardgame-project'
-           command: 'buildAndPush'
-           Dockerfile: '**/Dockerfile'
-
-  - stage: Scan_the_Docker_Image
-    displayName: "Scan the Docker Image"
-    jobs:
-      - job: Scan_the_docker_image
-        displayName: "Scan the docker image"
-        steps:
-        - task: CmdLine@2
-          inputs:
-           script: 'trivy image prasannanjaneya/boardgame-project:$BUILD_BUILDID --format table --severity MEDIUM,LOW,UNKNOWN,HIGH --exit-code 0   &&  trivy image prasannanjaneya/boardgame-project:$BUILD_BUILDID --format table --severity CRITICAL --exit-code 1'
+          - script: |
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+              ./trivy image --format json --output trivy-report-image.json --severity MEDIUM,LOW,UNKNOWN,HIGH,CRITICAL $(DOCKER_IMAGE_NAME):$(Build.BuildId)
+            displayName: "Run Trivy Docker Scan"
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: 'trivy-report-image.json'
+              ArtifactName: 'TrivyDockerReport'
+              publishLocation: 'Container'
