@@ -108,4 +108,4 @@ stages:
         steps:
         - task: CmdLine@2
           inputs:
-           script: 'trivy image vijesh89/boardgame:$BUILD_BUILDID --format table --severity MEDIUM,LOW,UNKNOWN,HIGH --exit-code 0   &&  trivy image vijesh89/boardgame:$BUILD_BUILDID --format table --severity CRITICAL --exit-code 1'
+           script: 'trivy image prasannanjaneya/boardgame-project:$BUILD_BUILDID --format table --severity MEDIUM,LOW,UNKNOWN,HIGH --exit-code 0   &&  trivy image prasannanjaneya/boardgame-project:$BUILD_BUILDID --format table --severity CRITICAL --exit-code 1'
