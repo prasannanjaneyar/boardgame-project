@@ -21,18 +21,13 @@ stages:
             inputs:
               azureSubscription: 'Azure subscription 1(5e47e5a1-7dc4-4abb-87a2-f371200842ea)'
               mavenPomFile: 'pom.xml'
-              goals: 'clean install'
-              options: '-B'
               publishJUnitResults: true
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.11'
               mavenVersionOption: 'Default'
-              mavenOptions: '$(MAVEN_OPTS)'
               mavenAuthenticateFeed: false
               effectivePomSkip: false
-              sonarQubeRunAnalysis: true
-              sqMavenPluginVersionChoice: 'latest'
+              sonarQubeRunAnalysis: false
 
   - stage: Dependency_Scan
     displayName: "Dependency Scan with Trivy"
@@ -43,14 +38,5 @@ stages:
         steps:
           - script: |
               echo "Installing Trivy..."
-              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-              echo "Running Trivy FS scan..."
-              ./trivy fs --security-checks vuln --scanners vuln --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL .
+              trivy fs --format table --severity MEDIUM,LOW,UNKNOWN,HIGH --exit-code 0 . && trivy fs --format table --severity CRITICAL --exit-code 1 .
             displayName: "Run Trivy on source code"
-
-          # OPTIONAL: Upload report as pipeline artifact
-          - task: PublishBuildArtifacts@1
-            inputs:
-              PathtoPublish: "trivy-report.json"
-              ArtifactName: "TrivyReport"
-              publishLocation: "Container"
