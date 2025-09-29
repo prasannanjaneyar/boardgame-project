@@ -88,8 +88,11 @@ stages:
               containerRegistry: 'docker-svc'
               repository: '$(DOCKER_IMAGE_NAME)'
               command: 'buildAndPush'
-              Dockerfile: '**/Dockerfile'
+              Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
               buildContext: '$(Build.SourcesDirectory)'
+              addPipelineData: false
+              addBaseImageData: false
+              tags: '$(tag)'
 
   # -----------------------------
   - stage: Scan_Docker_Image
