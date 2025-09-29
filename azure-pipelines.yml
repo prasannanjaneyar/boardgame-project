@@ -89,7 +89,7 @@ stages:
               repository: '$(DOCKER_IMAGE_NAME)'
               command: 'buildAndPush'
               Dockerfile: '**/Dockerfile'
-              buildContext: '/target'
+              buildContext: '$(Build.SourcesDirectory)'
 
   # -----------------------------
   - stage: Scan_Docker_Image
