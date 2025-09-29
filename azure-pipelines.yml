@@ -20,7 +20,7 @@ stages:
         displayName: "Compile, Test & SonarQube"
         steps:
           # SonarQube Prepare
-          - task: SonarQubePrepare@5
+          - task: SonarQubePrepare@8
             displayName: "Prepare SonarQube Analysis"
             inputs:
               SonarQube: 'sonarqube-svc'      # Your service connection name
@@ -43,10 +43,10 @@ stages:
               sqMavenPluginVersionChoice: 'latest'
 
           # SonarQube Analyze & Publish Quality Gate
-          - task: SonarQubeAnalyze@5
+          - task: SonarQubeAnalyze@8
             displayName: "Run SonarQube Analysis"
 
-          - task: SonarQubePublish@5
+          - task: SonarQubePublish@8
             displayName: "Publish SonarQube Quality Gate Results"
             inputs:
               pollingTimeoutSec: '300'
@@ -89,6 +89,7 @@ stages:
               repository: '$(DOCKER_IMAGE_NAME)'
               command: 'buildAndPush'
               Dockerfile: '**/Dockerfile'
+              buildContext: '.'               # Ensure target/ exists
               tags: '$(Build.BuildId)'
 
   # -----------------------------
