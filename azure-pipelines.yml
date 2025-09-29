@@ -8,7 +8,7 @@ pool:
 
 variables:
   MAVEN_OPTS: "-Dmaven.test.failure.ignore=true"
-  DOCKER_IMAGE_NAME: "prasannanjaneya/boardgame-project"
+  #DOCKER_IMAGE_NAME: "prasannanjaneya/boardgame-project"
   JAVA_HOME_PATH: "/usr/lib/jvm/java-17-openjdk-amd64"  # Java 17 for SonarQube plugin
 
 stages:
@@ -86,8 +86,8 @@ stages:
             displayName: "Build & Push Docker Image"
             inputs:
               containerRegistry: 'docker-svc'
-              repository: '$(DOCKER_IMAGE_NAME)'
-              command: 'buildAndPush'
+              repository: 'prasannanjaneya/boardgame-project'
+              command: 'build'
               Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
               buildContext: '$(Build.SourcesDirectory)'
               addPipelineData: false
