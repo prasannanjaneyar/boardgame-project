@@ -9,7 +9,8 @@ pool:
 variables:
   MAVEN_OPTS: "-Dmaven.test.failure.ignore=true"
   DOCKER_IMAGE_NAME: "prasannanjaneya/boardgame-project"
-  JAVA_HOME_PATH: "/usr/lib/jvm/java-11-openjdk-amd64"  # Path to your installed JDK
+  #JAVA_HOME_PATH: "/usr/lib/jvm/java-11-openjdk-amd64"  # Path to your installed JDK
+  JAVA_HOME_PATH: "/usr/lib/jvm/java-17-openjdk-amd64"
 
 stages:
   # -----------------------------
